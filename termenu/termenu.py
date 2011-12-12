@@ -104,7 +104,7 @@ class VerticalMenu(object):
         result = menu.show()
         print result
     """
-    def __init__(self, title, options, default=None, clearOnExit=True, height=None):
+    def __init__(self, title, options, default=None, clearOnExit=True, height=None, multiSelect=False):
         self.title = title
         self.options = options
         if default is None:
@@ -122,6 +122,9 @@ class VerticalMenu(object):
             height = maxHeight
         self.height = min(len(options), height)
         self.first = self.selected - self.selected % self.height
+        self.multiSelect = multiSelect
+        if multiSelect:
+            self.selectedItems = set()
 
     def _print(self, data):
         sys.stdout.write(data)
@@ -135,14 +138,21 @@ class VerticalMenu(object):
         options += [""] * (self.height - len(options))
         for i, option in enumerate(options):
             if i == 0 and self.first != 0:
-                marker = ansi.colorize("^ ", "white", bright=True)
+                marker = ansi.colorize("^", "white", bright=True)
             elif i == self.height-1 and self.first + self.height < len(self.options):
-                marker = ansi.colorize("v ", "white", bright=True)
+                marker = ansi.colorize("v", "white", bright=True)
             else:
-                marker = "  "
+                marker = " "
+            multiSelected = self.multiSelect and (self.first + i) in self.selectedItems
+            marker += "*" if multiSelected else " "
             line = option + " " * (self.width - len(option))
             if self.first + i == self.selected:
-                line = ansi.colorize(line, "black", "white")
+                if multiSelected:
+                    line = ansi.colorize(line, "black", "cyan")
+                else:
+                    line = ansi.colorize(line, "black", "white")
+            elif multiSelected:
+                    line = ansi.colorize(line, "black", "blue")
             line = marker + line + "\n"
             self._print(line)
 
@@ -178,11 +188,22 @@ class VerticalMenu(object):
                 elif key == "end":
                     self.selected = len(self.options)-1
                 elif key == "enter":
-                    return self.options[self.selected]
+                    if self.multiSelect:
+                        if not self.selectedItems:
+                            self.selectedItems.add(self.selected)
+                        return [self.options[i] for i in sorted(self.selectedItems)]
+                    else:
+                        return self.options[self.selected]
                 elif key == "esc":
                     return None
+                elif key == " ":
+                    if self.multiSelect:
+                        if self.selected in self.selectedItems:
+                            self.selectedItems.remove(self.selected)
+                        else:
+                            self.selectedItems.add(self.selected)
                 if self.selected < 0:
-                    self. selected = 0
+                    self.selected = 0
                 if self.selected > len(self.options)-1:
                     self.selected = len(self.options)-1
                 self.first = self.selected - self.selected % self.height
@@ -204,6 +225,6 @@ def show_menu(title, options, default=None, clearOnExit=True):
     menu = Menu(title, options, default, clearOnExit)
     return menu.show()
 
-def show_vertical_menu(title, options, default=None, clearOnExit=True, height=None):
-    menu = VerticalMenu(title, options, default, clearOnExit, height)
+def show_vertical_menu(title, options, default=None, clearOnExit=True, height=None, multiSelect=False):
+    menu = VerticalMenu(title, options, default, clearOnExit, height, multiSelect)
     return menu.show()
