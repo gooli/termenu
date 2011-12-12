@@ -35,6 +35,7 @@ Examples:
     parser.add_option("-d", "--default", dest="default", help="Default item to select", metavar="OPTION")
     parser.add_option("-l", "--lines", dest="lines", type="int", help="Max lines for vertical menu", metavar="LINES", default=20)
     parser.add_option("-o", "--one", dest="one", action="store_true", help="Don't show a menu if only one option was given")
+    parser.add_option("-s", "--single", dest="single", action="store_true", help="Single-Select - Disable multiple selection")
     (options, args) = parser.parse_args()
 
     if options.help:
@@ -60,7 +61,9 @@ Examples:
         result = items[0]
     else:
         if options.vertical:
-            result = termenu.show_vertical_menu(options.title, items, default=options.default, height=options.lines)
+            result = termenu.show_vertical_menu(options.title, items, default=options.default, height=options.lines, multiSelect=not options.single)
+            if not options.single:
+                result = " ".join(result)
         else:
             result = termenu.show_menu(options.title, items, default=options.default)
 
