@@ -1,6 +1,11 @@
 import sys
 import ansi
 
+try:
+    xrange()
+except:
+    xrange = range
+
 def pluggable(method):
     """
     Mark a class method as extendable with plugins.
@@ -139,7 +144,7 @@ class Termenu(object):
     def _get_debug_view(self):
         options = []
         for i, option in enumerate(self._get_window()):
-            options.append(("(%s)" if i == self.cursor else "%s") % option)
+            options.append(("(%s)" if i == self.cursor else "%s") % option.text)
         return " ".join(options)
 
     @pluggable
@@ -504,7 +509,7 @@ if __name__ == "__main__":
     options.insert(17, Header("Seventeen"))
     menu = Termenu(options, plugins=[HeaderPlugin(), FilterPlugin(), TitlePlugin("List Of Numbers")])
 #~     menu = Termenu(["option-%06d" % i for i in xrange(1,100)], height=10, plugins=[Precolored()])
-    print menu.show()
+    print(menu.show())
 #~     print "Would you like to continue? ",
 #~     result = Minimenu(["Abort", "Retry", "Fail"], "Fail").show()
 #~     print result

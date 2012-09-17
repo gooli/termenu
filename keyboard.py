@@ -1,4 +1,5 @@
 from __future__ import with_statement
+from __future__ import print_function
 
 import os
 import sys
@@ -64,7 +65,7 @@ class RawTerminal(object):
         fcntl.fcntl(STDIN, fcntl.F_SETFL, self._old)
 
     def get(self):
-        return sys.stdin.read(1)
+        return sys.stdin.read(5)
 
     def wait(self):
         select.select([STDIN], [], [])
@@ -87,7 +88,8 @@ def keyboard_listener():
             while True:
                 try:
                     sequence = sequence + terminal.get()
-                except IOError, e:
+                    break
+                except IOError as e:
                     if e.errno == errno.EAGAIN:
                         break
             # handle ANSI key sequences
@@ -105,5 +107,5 @@ def keyboard_listener():
     
 if __name__ == "__main__":
     for key in keyboard_listener():
-        print key
+        print(key)
 

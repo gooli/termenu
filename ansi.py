@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import sys
 import re
 
@@ -98,6 +100,4 @@ if __name__ == "__main__":
     for bright in [False, True]:
         for background in colors:
             for color in colors:
-                print colorize("Hello World!", color, background, bright),
-            print
-        print
+                print(colorize("Hello World!", color, background, bright))
