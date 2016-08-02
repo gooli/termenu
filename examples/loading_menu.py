@@ -56,7 +56,7 @@ class TitleCounterPlugin(termenu.TitlePlugin):
         return super(TitleCounterPlugin, self)._print_menu()
 
 def data(size):
-    for i in xrange(size):
+    for i in range(size):
         yield i
         time.sleep(0.05)
 

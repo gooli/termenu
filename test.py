@@ -1,7 +1,5 @@
-import sys
-sys.path.append("..")
 import unittest
-import ansi
+from termenu import ansi
 from termenu import Termenu, Plugin, FilterPlugin
 
 OPTIONS = ["%02d" % i for i in xrange(1,100)]

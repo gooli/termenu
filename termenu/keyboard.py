@@ -1,5 +1,5 @@
-from __future__ import with_statement
-from __future__ import print_function
+
+
 
 import os
 import sys
@@ -21,6 +21,8 @@ ANSI_SEQUENCES = dict(
     delete = '\x1b[3~',
     pageUp = '\x1b[5~',
     pageDown = '\x1b[6~',
+    ctrlLeft = '\x1b[1;5C',
+    ctrlRight = '\x1b[1;5D',
     F1 = '\x1bOP',
     F2 = '\x1bOQ',
     F3 = '\x1bOR',
@@ -35,13 +37,14 @@ ANSI_SEQUENCES = dict(
     F12 = '\x1b[24~',
 )
 
-KEY_NAMES = dict((v,k) for k,v in ANSI_SEQUENCES.items())
+KEY_NAMES = dict((v,k) for k,v in list(ANSI_SEQUENCES.items()))
 KEY_NAMES.update({
     '\x1b' : 'esc',
     '\n' : 'enter',
     ' ' : 'space',
     '\x7f' : 'backspace',
 })
+
 
 class RawTerminal(object):
     def __init__(self, blocking=True):
@@ -65,7 +68,10 @@ class RawTerminal(object):
         fcntl.fcntl(STDIN, fcntl.F_SETFL, self._old)
 
     def get(self):
-        return sys.stdin.read(1)
+        ret = sys.stdin.read(1)
+        if not ret:
+            raise EOFError()
+        return ret
 
     def wait(self):
         select.select([STDIN], [], [])
@@ -77,39 +83,42 @@ class RawTerminal(object):
     def __exit__(self, *args):
         self.close()
 
+
 def keyboard_listener(heartbeat=None):
     with RawTerminal(blocking=False) as terminal:
         # return keys
         sequence = ""
         while True:
-            yielded = False
             # wait for keys to become available
-            select.select([STDIN], [], [], heartbeat)
+            ret, _, __ = select.select([STDIN], [], [], heartbeat)
+            if not ret:
+                yield "heartbeat"
+                continue
+
             # read all available keys
             while True:
                 try:
-                    sequence = sequence + terminal.get()
+                    sequence += terminal.get()
+                except EOFError:
+                    break
                 except IOError as e:
                     if e.errno == errno.EAGAIN:
                         break
+
             # handle ANSI key sequences
             while sequence:
-                for seq in ANSI_SEQUENCES.values():
+                for seq in list(ANSI_SEQUENCES.values()):
                     if sequence[:len(seq)] == seq:
                         yield KEY_NAMES[seq]
-                        yielded = True
                         sequence = sequence[len(seq):]
                         break
                 # handle normal keys
                 else:
                     for key in sequence:
                         yield KEY_NAMES.get(key, key)
-                        yielded = True
                     sequence = ""
-            if not yielded:
-                yield "heartbeat"
-    
+
+
 if __name__ == "__main__":
     for key in keyboard_listener(0.5):
         print(key)
-

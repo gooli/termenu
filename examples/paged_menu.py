@@ -13,16 +13,18 @@ class IteratorList(object):
         self._list = []
 
     def __getitem__(self, index):
+        if isinstance(index, slice):
+            return self.__slice__(index.start, index.stop, index.step)
         try:
             while index >= len(self._list):
-                self._list.append(self._iter.next())
+                self._list.append(next(self._iter))
         except StopIteration:
             pass
         return self._list[index]
 
-    def __slice__(self, i, j):
+    def __slice__(self, i, j, k=None):
         self[j]
-        return self._list[i:j]
+        return self._list[i:j:k]
 
 def show_long_menu(optionsIter, pagesize=30):
     Next = object()
@@ -48,4 +50,4 @@ def show_long_menu(optionsIter, pagesize=30):
     return result
 
 if __name__ == "__main__":
-    show_long_menu(xrange(500))
+    show_long_menu(range(500))

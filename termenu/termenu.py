@@ -1,6 +1,8 @@
+
+
 import sys
-import ansi
-from version import version
+from .version import version
+from . import keyboard, ansi
 
 def show_menu(title, options, default=None, height=None, width=None, multiselect=False, precolored=False):
     """
@@ -38,9 +40,10 @@ def show_menu(title, options, default=None, height=None, width=None, multiselect
     return menu.show()
 
 try:
-    xrange()
-except:
-    xrange = range
+    range = xrange
+except NameError:
+    pass
+
 
 def pluggable(method):
     """
@@ -56,6 +59,7 @@ def pluggable(method):
     wrapped.original = method
     return wrapped
 
+
 def register_plugin(host, plugin):
     """
     Register a plugin with a host object. Some @pluggable methods in the host
@@ -70,22 +74,29 @@ def register_plugin(host, plugin):
     plugin.host = host
     host._plugins.append(plugin)
 
+
 class Plugin(object):
     def __getattr__(self, name):
         # allow calls to fall through to parent plugins if a method isn't defined
         return getattr(self.parent, name)
 
+
 class Termenu(object):
     class _Option(object):
         def __init__(self, option, **attrs):
-            if isinstance(option, tuple) and len(option) == 2:
-                self.text, self.result = option
-            else:
-                self.text = self.result = option
-            if not isinstance(self.text, basestring):
-                self.text = str(self.text)
             self.selected = False
             self.attrs = attrs
+            if isinstance(option, tuple) and len(option) == 2:
+                self.text, self.result = option
+            elif isinstance(option, dict) and 'text' in option:
+                self.text = option['text']
+                self.result = option.get("result", self.text)
+                self.selected = option.get("selected", self.selected)
+                self.attrs.update(option)
+            else:
+                self.text = self.result = option
+            if not isinstance(self.text, str):
+                self.text = str(self.text)
 
     def __init__(self, options, default=None, height=None, width=None, multiselect=True, heartbeat=None, plugins=None):
         for plugin in plugins or []:
@@ -112,7 +123,6 @@ class Termenu(object):
 
     @pluggable
     def show(self):
-        import keyboard
         self._print_menu()
         ansi.save_position()
         ansi.hide_cursor()
@@ -261,7 +271,7 @@ class Termenu(object):
     @pluggable
     def _clear_menu(self):
         ansi.restore_position()
-        for i in xrange(self.height):
+        for i in range(self.height):
             ansi.clear_eol()
             ansi.up()
         ansi.clear_eol()
@@ -328,6 +338,7 @@ class Termenu(object):
 
         return option
 
+
 class FilterPlugin(Plugin):
     def __init__(self):
         self.text = None
@@ -361,7 +372,7 @@ class FilterPlugin(Plugin):
     def _print_menu(self):
         self.parent._print_menu()
 
-        for i in xrange(0, self.host.height - len(self.host.options)):
+        for i in range(0, self.host.height - len(self.host.options)):
             ansi.clear_eol()
             ansi.write("\n")
         if self.text is not None:
@@ -390,6 +401,7 @@ class OptionGroup(object):
     def __init__(self, header, options):
         self.header = header
         self.options = options
+
 
 class OptionGroupPlugin(Plugin):
     def _set_default(self, default):
@@ -455,6 +467,7 @@ class OptionGroupPlugin(Plugin):
         else:
             return self.parent._decorate(option, **flags)
 
+
 class PrecoloredPlugin(Plugin):
     def _make_option_objects(self, options):
         options = self.parent._make_option_objects(options)
@@ -485,6 +498,7 @@ class PrecoloredPlugin(Plugin):
 
         return option
 
+
 class TitlePlugin(Plugin):
     def __init__(self, title):
         self.title = title
@@ -502,6 +516,7 @@ class TitlePlugin(Plugin):
         ansi.up()
         ansi.clear_eol()
 
+
 class Minimenu(object):
     def __init__(self, options, default=None):
         self.options = options
@@ -511,7 +526,6 @@ class Minimenu(object):
             self.cursor = 0
 
     def show(self):
-        import keyboard
         ansi.hide_cursor()
         self._print_menu(rewind=False)
         try:
@@ -553,6 +567,7 @@ class Minimenu(object):
         menu = self._make_menu(_decorate=False)
         ansi.write("\b"*len(menu)+" "*len(menu)+"\b"*len(menu))
 
+
 def redirect_std():
     """
     Connect stdin/stdout to controlling terminal even if the scripts input and output
@@ -561,23 +576,30 @@ def redirect_std():
     stdin = sys.stdin
     stdout = sys.stdout
     if not sys.stdin.isatty():
-        sys.stdin = open("/dev/tty", "r", 0)
+        sys.stdin = open("/dev/tty", "rb", 0)
     if not sys.stdout.isatty():
-        sys.stdout = open("/dev/tty", "w", 0)
+        sys.stdout = open("/dev/tty", "wb", 0)
     return stdin, stdout
+
 
 def shorten(s, l=100):
     if len(s) <= l or l < 3:
         return s
-    return s[:l/2-2] + "..." + s[-l/2+1:]
+    return s[:l//2-2] + "..." + s[-l//2+1:]
 
-def get_terminal_size():
-    import fcntl, termios, struct
-    h, w, hp, wp = struct.unpack('HHHH', fcntl.ioctl(sys.stdin,
-        termios.TIOCGWINSZ, struct.pack('HHHH', 0, 0, 0, 0)))
-    return w, h
+
+try:
+    from os import get_terminal_size
+except ImportError:
+    def get_terminal_size():
+        import fcntl, termios, struct
+        h, w, hp, wp = struct.unpack(
+            'HHHH',
+            fcntl.ioctl(sys.stdin, termios.TIOCGWINSZ, struct.pack('HHHH', 0, 0, 0, 0)))
+        return w, h
+
 
 if __name__ == "__main__":
-    odds = OptionGroup("Odd Numbers", [("%06d" % i, i) for i in xrange(1, 10, 2)])
-    evens = OptionGroup("Even Numbers", [("%06d" % i, i) for i in xrange(2, 10, 2)])
+    odds = OptionGroup("Odd Numbers", [("%06d" % i, i) for i in range(1, 10, 2)])
+    evens = OptionGroup("Even Numbers", [("%06d" % i, i) for i in range(2, 10, 2)])
     print(show_menu("List Of Numbers", [odds, evens], multiselect=True))

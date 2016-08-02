@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 
 import errno
 import sys
@@ -11,7 +11,7 @@ def write(s):
         while True:
             try:
                 func(*args)
-            except IOError, e:
+            except IOError as e:
                 if e.errno != errno.EAGAIN:
                     raise
             else:
@@ -36,6 +36,9 @@ def move_horizontal(column=1):
 
 def move(row, column):
     write("\x1b[%d;%dH" % (row, column))
+
+def home():
+    write("\x1b[H")
 
 def clear_screen():
     write("\x1b[2J")
@@ -106,7 +109,7 @@ class ansistr(str):
 
 if __name__ == "__main__":
     # Print all colors
-    colors = [name for name, color in sorted(COLORS.items(), key=lambda v: v[1])]
+    colors = [name for name, color in sorted(list(COLORS.items()), key=lambda v: v[1])]
     for bright in [False, True]:
         for background in colors:
             for color in colors:
